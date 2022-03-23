@@ -1,32 +1,47 @@
-export const escapeIdentifier = (value: string) => `"${value.replaceAll('"', '""')}"`;
+export const rawSymbol = Symbol();
 
-export const escapeLiteral = (value: string | number | bigint | boolean | Date | null | undefined) => {
-  if (value == null) {
+export const raw = (value: string) => ({ [rawSymbol]: value });
+
+export const escapeIdentifier = (identifier: string) => `"${identifier.replaceAll('"', '""')}"`;
+
+export const escapeIdentifierString = (identifier: string) => {
+  const escapedIdentifier = escapeIdentifier(identifier);
+  const escapedIdentifierString = new String(escapedIdentifier) as String & { [rawSymbol]: string };
+  escapedIdentifierString[rawSymbol] = escapedIdentifier;
+  return escapedIdentifierString;
+};
+
+export const escapeLiteral = (
+  literal: string | number | bigint | boolean | Date | { [rawSymbol]: string } | null | undefined,
+) => {
+  if (literal == null) {
     return "null";
   }
 
-  switch (typeof value) {
+  switch (typeof literal) {
     case "string":
       break;
     case "boolean":
-      return value ? "true" : "false";
+      return literal ? "true" : "false";
     case "number":
     case "bigint":
-      return value.toString();
+      return literal.toString();
     case "object":
-      if (value instanceof Date) {
-        const iso = value.toISOString();
+      if (literal instanceof Date) {
+        const iso = literal.toISOString();
         return `'${iso.slice(0, 10)} ${iso.slice(11, 23)}'`;
+      } else if (rawSymbol in literal) {
+        return literal[rawSymbol];
       }
     default:
-      value = String(value);
+      literal = String(literal);
   }
 
-  value = `'${value.replaceAll("'", "''")}'`;
+  literal = `'${literal.replaceAll("'", "''")}'`;
 
-  if (value.includes("\\")) {
-    value = `E${value.replaceAll("\\", "\\\\")}`;
+  if (literal.includes("\\")) {
+    literal = `E${literal.replaceAll("\\", "\\\\")}`;
   }
 
-  return value;
+  return literal;
 };
